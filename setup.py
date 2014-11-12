@@ -15,7 +15,7 @@ requires = [
     'pymongo==2.6.3',
     'pyramid-beaker',
     'pyramid-rpc',
-    'Django==1.4.10',
+    'Django==1.4',
     'decorator',
     'celery==3.1.6',
     'pytz',
@@ -24,7 +24,7 @@ requires = [
     ]
 
 setup(name='dd_app',
-      version='0.0',
+      version='0.2.0',
       description='dd_app',
       long_description=README + '\n\n' +  CHANGES,
       classifiers=[
