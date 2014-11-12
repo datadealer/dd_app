@@ -1,0 +1,11 @@
+*.pyc
+*.pyo
+*.mo
+*.swp
+*.DS_Store
+*.Trashes/
+*.fseventsd/
+*.egg-info/
+/local.ini
+/doc/build/
+/dd_app/tasks/celeryconfig.py
