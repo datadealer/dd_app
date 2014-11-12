@@ -1,0 +1,135 @@
+upstream dd_auth {
+    server localhost:8080;
+}
+ 
+upstream dd_app {
+    server localhost:8081;
+}
+ 
+upstream dd_app_sock0 {
+    server localhost:8082;
+}
+
+server {
+    listen *:80;
+    server_name datadealer.local;
+    access_log /var/log/nginx/datadealer.local-access.log;
+    error_log /var/log/nginx/datadealer.local-error.log;
+    location / { 
+        rewrite ^/(.*)$ https://datadealer.local/$1 permanent;
+    }   
+}
+
+server {
+    listen *:80;
+    server_name auth-admin.datadealer.local;
+    access_log /var/log/nginx/auth-admin.datadealer.local-access.log;
+    error_log /var/log/nginx/auth-admin.datadealer.local-error.log;
+    location / { 
+        rewrite ^/(.*)$ https://auth-admin.datadealer.local/$1 permanent;
+    }   
+}
+
+server {
+    listen *:443 ssl;
+    server_name datadealer.local;
+   
+    add_header  Strict-Transport-Security "max-age=315360000; includeSubdomains";
+   
+    access_log /var/log/nginx/datadealer.local-access.log;
+    error_log /var/log/nginx/datadealer.local-error.log;
+   
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Server $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Proto "SSL";
+    proxy_redirect off;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Scheme $scheme;
+    proxy_connect_timeout 75; 
+    proxy_read_timeout 60s;
+   
+    location /dd_auth_static/ {
+        alias /home/dd/src/dd_auth/static/;
+    }   
+   
+    location /accounts/ {
+        proxy_pass http://dd_auth/accounts/;
+    }   
+   
+    location /authapi/ {
+        proxy_pass http://dd_auth/authapi/;
+    }
+   
+    location /app/ {
+        proxy_pass http://dd_app/app/;
+    }
+
+    location /__sockjs__/ {
+        proxy_http_version 1.1;
+        proxy_read_timeout 13600s;
+        proxy_pass http://dd_app_sock0/__sockjs__/;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+    }
+
+    location / {
+        alias /home/dd/src/dd_js/dist/;
+        add_header  Cache-Control "public";
+        expires     168h;
+    }
+
+    # you'll need to generate these
+    ssl_certificate /path/to/datadealer.local.cert;
+    ssl_certificate_key /path/to/datadealer.local.key;
+    ssl_dhparam /path/to/dhparam.pem;
+   
+    ssl_protocols TLSv1.2 TLSv1.1 TLSv1;
+    ssl_ciphers "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA !aNULL !eNULL !LOW !3DES !MD5 !EX
+    ssl_prefer_server_ciphers on;
+    add_header Strict-Transport-Security max-age=15768000;
+}
+
+server {
+    listen *:443 ssl;
+    server_name auth-admin.datadealer.local;
+
+    root /var/www/datadealer.local;
+   
+    add_header  Strict-Transport-Security "max-age=315360000; includeSubdomains";
+   
+    access_log /var/log/nginx/auth-admin.datadealer.local-access.log;
+    error_log /var/log/nginx/auth-admin.datadealer.local-error.log;
+   
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Forwarded-Server $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Proto "SSL";
+    proxy_redirect off;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Scheme $scheme;
+    proxy_connect_timeout 75; 
+    proxy_read_timeout 60s;
+   
+    location /dd_auth_static/ {
+        alias /home/dd/src/dd_auth/static/;
+    }   
+   
+    location /dd_auth_admin/ {
+        proxy_pass http://dd_auth/dd_auth_admin/;
+        allow 127.0.0.1;
+        deny all;
+    }
+ 
+    # you'll need to generate these
+    ssl_certificate /path/to/auth-admin.datadealer.local.cert;
+    ssl_certificate_key /path/to/auth-admin.datadealer.local.key;
+    ssl_dhparam /path/to/dhparam.pem;
+   
+    ssl_protocols TLSv1.2 TLSv1.1 TLSv1;
+    ssl_ciphers "EECDH+ECDSA+AESGCM EECDH+aRSA+AESGCM EECDH+ECDSA+SHA384 EECDH+ECDSA+SHA256 EECDH+aRSA+SHA384 EECDH+aRSA+SHA256 EECDH+aRSA+RC4 EECDH EDH+aRSA !aNULL !eNULL !LOW !3DES !MD5 !EX
+    ssl_prefer_server_ciphers on;
+    add_header Strict-Transport-Security max-age=15768000;
+}
